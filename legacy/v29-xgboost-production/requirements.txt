@@ -1,0 +1,15 @@
+# Historical dependency inventory for source review only.
+# Not resolved or supported; do not use for the maintained pipeline.
+# Install the root requirements.txt instead.
+
+xgboost==3.0.0
+scikit-learn==1.5.2
+optuna==4.1.0
+pandas==2.2.3
+numpy==2.2.1
+TA-Lib==0.4.32
+MetaTrader5==5.0.4626
+requests==2.32.3
+joblib==1.4.2
+matplotlib==3.10.0
+seaborn==0.13.2

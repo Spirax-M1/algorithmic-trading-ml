@@ -1,3 +1,5 @@
+raise SystemExit("Historical experiment disabled: see docs/audit.md; run python -m trading_research --demo")
+
 """
 ================================================================================
 TRADING BOT V29 - PRODUCTION (LIVE REALITY ADJUSTED) - PERFETTO

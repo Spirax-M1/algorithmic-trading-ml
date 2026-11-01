@@ -1,3 +1,5 @@
+raise SystemExit("Historical experiment disabled: see docs/audit.md; run python -m trading_research --demo")
+
 # train_v26_HYBRID.py
 # TRAINING STRATEGIA IBRIDA: LSTM + XGBoost
 # Hardware: RTX 3080 10GB su WSL2
