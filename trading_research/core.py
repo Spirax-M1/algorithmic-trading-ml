@@ -28,7 +28,7 @@ def validate(bars):
         raise ValueError('OHLC values must be finite and positive')
     if ((p[:, 1] < p.max(axis=1)) | (p[:, 2] > p.min(axis=1))).any():
         raise ValueError('Inconsistent OHLC bounds')
-    return bars
+    return Bars(tuple(bars.time), p)
 
 
 def read_csv(path):
@@ -37,6 +37,8 @@ def read_csv(path):
         if reader.fieldnames != ['time', 'open', 'high', 'low', 'close']:
             raise ValueError('Required columns: time,open,high,low,close (in this order)')
         rows = list(reader)
+        if any(None in row or any(value is None or not value.strip() for value in row.values()) for row in rows):
+            raise ValueError('CSV rows must contain exactly five non-empty fields')
     return validate(Bars(tuple(r['time'] for r in rows), np.array([
         [float(r[k]) for k in ('open', 'high', 'low', 'close')] for r in rows
     ])))
@@ -89,7 +91,10 @@ def sigmoid(x):
 
 def fit(x, y, epochs=400):
     """Fixed logistic baseline; normalization is fitted on training only."""
-    if len(x) != len(y) or not np.isfinite(x).all():
+    x, y = np.asarray(x, dtype=float), np.asarray(y, dtype=float)
+    if (x.ndim != 2 or x.shape[1] != len(FEATURES) or len(x) == 0
+            or y.shape != (len(x),) or not np.isfinite(x).all()
+            or not np.isin(y, [0, 1]).all() or not isinstance(epochs, int) or epochs < 1):
         raise ValueError('Invalid training data')
     mean, scale = x.mean(axis=0), x.std(axis=0)
     scale = np.where(scale < 1e-12, 1., scale)
@@ -99,17 +104,27 @@ def fit(x, y, epochs=400):
         error = sigmoid(z @ w + bias) - y
         w -= .1 * (z.T @ error / len(z) + .01 * w)
         bias -= .1 * error.mean()
-    return {'mean': mean.tolist(), 'scale': scale.tolist(), 'weights': w.tolist(),
+    return {'schema_version': 1, 'epochs': epochs, 'learning_rate': .1, 'l2': .01,
+            'mean': mean.tolist(), 'scale': scale.tolist(), 'weights': w.tolist(),
             'bias': float(bias), 'features': list(FEATURES)}
 
 
 def predict(model, x):
-    if model['features'] != list(FEATURES) or x.shape[1] != len(FEATURES):
-        raise ValueError('Feature schema mismatch')
-    if not np.isfinite(x).all():
-        raise ValueError('Non-finite features')
-    return sigmoid((x-np.array(model['mean']))/np.array(model['scale']) @
-                   np.array(model['weights']) + model['bias'])
+    x = np.asarray(x, dtype=float)
+    if (model.get('schema_version') != 1 or model.get('features') != list(FEATURES)
+            or x.ndim != 2 or x.shape[1] != len(FEATURES)):
+        raise ValueError('Feature or model schema mismatch')
+    try:
+        mean, scale, weights = (np.asarray(model[k], dtype=float)
+                                for k in ('mean', 'scale', 'weights'))
+        bias = float(model['bias'])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError('Invalid model parameters') from exc
+    if (any(v.shape != (len(FEATURES),) or not np.isfinite(v).all()
+            for v in (mean, scale, weights)) or (scale <= 0).any()
+            or not np.isfinite(bias) or not np.isfinite(x).all()):
+        raise ValueError('Non-finite inputs or invalid model parameters')
+    return sigmoid((x-mean)/scale @ weights + bias)
 
 
 def evaluate(realized, positions, cost_bps):
@@ -120,6 +135,9 @@ def evaluate(realized, positions, cost_bps):
     """
     if not np.isfinite(cost_bps) or cost_bps < 0:
         raise ValueError('cost_bps must be finite and nonnegative')
+    realized = np.asarray(realized, dtype=float)
+    if realized.ndim != 1 or len(realized) == 0 or not np.isfinite(realized).all():
+        raise ValueError('Returns must be a nonempty finite vector')
     positions = np.asarray(positions)
     if positions.shape != realized.shape or not np.isin(positions, [-1, 0, 1]).all():
         raise ValueError('Invalid positions')
@@ -127,6 +145,8 @@ def evaluate(realized, positions, cost_bps):
     if (net <= -1).any():
         raise ValueError('Simulation exhausted capital')
     equity = np.r_[1., np.cumprod(1+net)]
+    if not np.isfinite(equity).all():
+        raise ValueError('Equity overflow: invalid simulation scale')
     dd = equity / np.maximum.accumulate(equity) - 1
     active = positions != 0
     return {'trades': int(active.sum()), 'total_return': float(equity[-1]-1),
@@ -136,7 +156,7 @@ def evaluate(realized, positions, cost_bps):
 
 
 def run(bars, cost_bps=2.):
-    validate(bars)
+    bars = validate(bars)
     x, y, realized, idx = samples(bars)
     boundary = int(len(bars.time)*.8)
     train, test = purged_split(idx, boundary)
@@ -150,7 +170,10 @@ def run(bars, cost_bps=2.):
             raise ValueError('Empty validation fold')
         model = fit(x[tr], y[tr])
         probability = predict(model, x[va])
-        folds.append({'train_samples': len(tr), 'validation_samples': len(va),
+        folds.append({'last_training_label_bar': bars.time[idx[tr[-1]]+1],
+                      'first_validation_signal_bar': bars.time[idx[va[0]]],
+                      'last_validation_label_bar': bars.time[idx[va[-1]]+1],
+                      'train_samples': len(tr), 'validation_samples': len(va),
                       'accuracy': float(((probability >= .5) == y[va]).mean())})
     model = fit(x[train], y[train])
     probability = predict(model, x[test])
@@ -168,5 +191,11 @@ def run(bars, cost_bps=2.):
               'development_folds': folds,
               'test_accuracy': float(((probability >= .5) == y[test]).mean()),
               'majority_baseline_accuracy': float((y[test] == (y[train].mean() >= .5)).mean()),
-              'strategies': strategies}
+              'strategies': strategies,
+              'test_observations': [{'signal_bar': bars.time[idx[j]],
+                                     'execution_bar': bars.time[idx[j]+1],
+                                     'probability_up': float(probability[k]),
+                                     'position': int(positions[k]),
+                                     'realized_return': float(realized[j])}
+                                    for k, j in enumerate(test)]}
     return report, model

@@ -1,5 +1,9 @@
-# Historical experiments — unsupported
+# Historical experiments
 
-V26/V29 and their original documentation are retained for traceability. Their claims of production readiness, leakage prevention and measured performance are not validated. Read ../docs/audit.md before interpreting them. The maintained offline implementation is at ../trading_research/.
+Author: Salvatore (Spirax-M1).
 
-All historical Python entrypoints intentionally stop before importing dependencies or connecting to external services. Source is retained for review, not deployment. Re-enabling an entrypoint does not correct the documented defects.
+V26/V29 source is retained for review. Its Python entrypoints stop before importing dependencies or connecting to external services. The methodological defects are not repaired by this guard.
+
+The historical Markdown has been rewritten to remove unsupported claims and contradictory guidance. Dependency files are inventories, not validated installation recipes. Original source and documentation remain available in the [original snapshot](https://github.com/Spirax-M1/algorithmic-trading-ml/tree/930e3aa552236727e24ea68f9cec5280d2bd5ed8).
+
+Read the [audit](../docs/audit.md), [maintained pipeline](../README.md) and [resume instructions](../docs/RESUME.md).

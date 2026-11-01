@@ -19,6 +19,8 @@ def main():
     parser.add_argument('--cost-bps', type=float, default=2.)
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
+    if any((args.output / name).exists() for name in ('report.json', 'model.json')):
+        parser.error('Output already contains an experiment; choose a new --output directory')
     try:
         bars = synthetic(args.seed) if args.demo else read_csv(args.csv)
         report, model = run(bars, args.cost_bps)
@@ -26,7 +28,11 @@ def main():
         parser.error(str(exc))
     fingerprint = json.dumps({'time': bars.time, 'prices': bars.prices.tolist()},
                              separators=(',', ':')).encode()
-    report.update({'data_source': 'SYNTHETIC DEMO' if args.demo else 'USER CSV',
+    source_digest = hashlib.sha256()
+    for source_file in sorted(Path(__file__).parent.glob('*.py')):
+        source_digest.update(source_file.name.encode())
+        source_digest.update(source_file.read_bytes())
+    report.update({'source_sha256': source_digest.hexdigest(), 'data_source': 'SYNTHETIC DEMO' if args.demo else 'USER CSV',
                    'seed': args.seed if args.demo else None,
                    'data_sha256': hashlib.sha256(fingerprint).hexdigest(),
                    'python': platform.python_version(), 'numpy': np.__version__,
@@ -35,7 +41,7 @@ def main():
                                    'Historical OHLC only; no broker execution.']})
     args.output.mkdir(parents=True, exist_ok=True)
     for name, value in [('report', report), ('model', model)]:
-        (args.output / f'{name}.json').write_text(json.dumps(value, indent=2, allow_nan=False)+'\n')
+        (args.output / f'{name}.json').write_text(json.dumps(value, indent=2, allow_nan=False)+'\n', encoding='utf-8')
     print(f"{report['data_source']}: {report['test_samples']} held-out samples")
     print(f"Report: {args.output / 'report.json'}")
 

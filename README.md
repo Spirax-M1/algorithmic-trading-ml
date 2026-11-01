@@ -1,5 +1,7 @@
 # Time-series ML research
 
+Developed by **Salvatore ([Spirax-M1](https://github.com/Spirax-M1))**.
+
 An offline reference pipeline for evaluating directional models without mixing future observations into training. The maintained implementation uses a small logistic classifier, explicit execution timing, chronological evaluation and comparison baselines.
 
 **Status: research rebuild.** The demo uses synthetic prices. It does not establish predictive skill or profitability. Historical V26/V29 experiments are preserved under [`legacy/`](legacy/); their performance claims are withdrawn pending independent reproduction. There is no supported live trading path.
@@ -16,7 +18,7 @@ python -m unittest discover -s tests -v
 python -m trading_research --demo
 ```
 
-On Windows, activate with `.venv\Scripts\activate` instead. The experiment writes `artifacts/report.json` and `artifacts/model.json`. Reports include the dataset fingerprint, environment versions, split timestamps, development-fold scores, held-out classification metrics and net returns for three strategies. Model parameters use JSON, not executable serialization.
+On Windows, activate with `.venv\Scripts\activate` instead. Existing experiment files are never overwritten; use a fresh `--output` directory for each run. The experiment writes `artifacts/report.json` and `artifacts/model.json`. Reports include source and dataset fingerprints, timestamped test observations, environment versions, split timestamps, development-fold scores, held-out classification metrics and net returns for three strategies. Model parameters use JSON, not executable serialization.
 
 To use your own data:
 
@@ -61,3 +63,14 @@ The logistic implementation is deliberately a reference baseline, not a replacem
 - Evaluate cost sensitivity and performance across separate periods before considering deployment.
 
 See [LICENSE](LICENSE). Contributions should include a regression test for the failure being addressed.
+
+## Continuing this work
+
+The active draft is [PR #1](https://github.com/Spirax-M1/algorithmic-trading-ml/pull/1), branch `rebuild/reproducible-research`. Start with [RESUME.md](docs/RESUME.md) on another computer.
+
+- [Methodology and limitations](docs/methodology.md)
+- [Data preparation](docs/data.md)
+- [Source audit](docs/audit.md)
+- [Contributing](CONTRIBUTING.md)
+
+Contact: [smanciagli1@outlook.com](mailto:smanciagli1@outlook.com).
