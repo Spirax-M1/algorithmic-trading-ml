@@ -1,3 +1,5 @@
+raise SystemExit("Historical experiment disabled: see docs/audit.md; run python -m trading_research --demo")
+
 # bot_HYBRID_v26.py
 # STRATEGIA IBRIDA: LSTM (Trend) + XGBoost (Pattern)
 # Capitale: €920 → Pool LSTM €400 + Pool XGB €520

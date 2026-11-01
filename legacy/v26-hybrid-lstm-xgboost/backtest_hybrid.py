@@ -1,3 +1,5 @@
+raise SystemExit("Historical experiment disabled: see docs/audit.md; run python -m trading_research --demo")
+
 # backtest_v26.py
 # BACKTEST WALK-FORWARD: Test modelli V26 su dati Out-of-Sample
 # Simula trade reali con risk management identico al bot live

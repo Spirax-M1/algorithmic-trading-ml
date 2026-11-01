@@ -1,3 +1,5 @@
+raise SystemExit("Historical experiment disabled: see docs/audit.md; run python -m trading_research --demo")
+
 """
 ================================================================================
 FOREX BOT V29 - PRODUCTION TRAINING SCRIPT - FINAL VERSION
